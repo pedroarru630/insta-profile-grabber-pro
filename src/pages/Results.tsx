@@ -18,9 +18,14 @@ const Results = () => {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
 
   useEffect(() => {
+    // Try instagramData first, then fallback to other_instagram_profile
+    const instagramData = sessionStorage.getItem('instagramData');
     const storedProfile = sessionStorage.getItem('other_instagram_profile');
-    if (storedProfile) {
-      const parsed = JSON.parse(storedProfile);
+    
+    const dataToUse = instagramData || storedProfile;
+    
+    if (dataToUse) {
+      const parsed = JSON.parse(dataToUse);
       console.log('Results - Loaded profile data:', parsed);
       console.log('Results - profilePicUrlHD:', parsed.profilePicUrlHD);
       setProfileData(parsed);
@@ -81,6 +86,19 @@ const Results = () => {
               </AvatarFallback>
             </Avatar>
           </div>
+
+          {/* Direct image binding for testing */}
+          {profileImage && (
+            <div className="flex justify-center mb-4">
+              <img 
+                src={profileImage} 
+                alt="Instagram Profile Picture Direct" 
+                style={{width: '50px', height: '50px', border: '2px solid blue', borderRadius: '50%'}}
+                onLoad={() => console.log('🟢 Results - Direct img element loaded:', profileImage)}
+                onError={() => console.log('🔴 Results - Direct img element failed:', profileImage)}
+              />
+            </div>
+          )}
 
           {/* Name */}
           <h1 className="text-2xl font-bold text-center text-gray-800 mb-2">

@@ -1,3 +1,4 @@
+
 interface InstagramProfile {
   username: string;
   fullName?: string;
@@ -66,16 +67,13 @@ export class InstagramService {
 
       const responseJson = await response.json();
       
-      // 🔴 Debug Log #1: After fetching and before parsing
-      console.log("🔴 Raw Apify JSON:", responseJson);
-      console.log("🔴 Raw Apify JSON (stringified):", JSON.stringify(responseJson, null, 2));
+      // 🔴 Debug Log: Full raw JSON from Apify
+      console.log("🔴 Full raw JSON from Apify:", responseJson);
       
       // Parse the response and extract profile data
       const profileData = this.parseApifyResponse(responseJson, cleanUsername);
       
-      // 🟢 Debug Log #2: Immediately after parsing
       console.log("🟢 Parsed Profile Data:", profileData);
-      console.log("🟢 Parsed Profile Data (stringified):", JSON.stringify(profileData, null, 2));
       
       if (profileData && profileData.exists) {
         console.log('✅ FINAL PARSED PROFILE DATA:', JSON.stringify(profileData, null, 2));
@@ -90,10 +88,6 @@ export class InstagramService {
         profilePicUrlHD: `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanUsername)}&size=400&background=fb923c&color=ffffff&bold=true`,
         exists: true
       };
-      
-      // 🟢 Debug Log #2a: Placeholder profile data
-      console.log("🟢 Placeholder Profile Data:", placeholderProfile);
-      console.log("🟢 Placeholder Profile Data (stringified):", JSON.stringify(placeholderProfile, null, 2));
       
       return placeholderProfile;
       
@@ -120,11 +114,11 @@ export class InstagramService {
       
       console.log(`🔧 PARSING - Checking object at ${path}:`, JSON.stringify(obj, null, 2));
       
-      // Look for direct profile fields
+      // Look for direct profile fields with comprehensive field mapping
       const possibleFields = {
-        username: obj.username || obj.user_name || obj.handle,
-        fullName: obj.fullName || obj.full_name || obj.displayName || obj.display_name || obj.name,
-        profilePicUrlHD: obj.profilePicUrlHD || obj.profile_pic_url_hd || obj.profilePicUrl || obj.profile_pic_url || obj.avatar || obj.picture
+        username: obj.username || obj.user_name || obj.handle || obj.userName,
+        fullName: obj.fullName || obj.full_name || obj.displayName || obj.display_name || obj.name || obj.realName,
+        profilePicUrlHD: obj.profilePicUrlHD || obj.profile_pic_url_hd || obj.profilePicUrl || obj.profile_pic_url || obj.avatar || obj.picture || obj.profilePictureUrl
       };
 
       console.log(`🔧 PARSING - Extracted fields from ${path}:`, possibleFields);
@@ -135,31 +129,19 @@ export class InstagramService {
         return possibleFields;
       }
       
-      // Check nested structures
-      const nestedPaths = [
-        { key: 'owner', path: `${path}.owner` },
-        { key: 'user', path: `${path}.user` },
-        { key: 'graphql.user', path: `${path}.graphql.user` },
-        { key: 'data', path: `${path}.data` },
-        { key: 'profile', path: `${path}.profile` },
-        { key: 'userInfo', path: `${path}.userInfo` }
-      ];
-
-      for (const nested of nestedPaths) {
-        const nestedObj = nested.key.includes('.') ? 
-          nested.key.split('.').reduce((o, k) => o?.[k], obj) : 
-          obj[nested.key];
-          
-        if (nestedObj) {
-          console.log(`🔍 PARSING - Found nested object at ${nested.path}`);
-          const result = extractProfileData(nestedObj, nested.path);
-          if (result) return result;
-        }
-      }
-      
-      console.log(`❌ PARSING - No profile data found in ${path}`);
       return null;
     };
+
+    // Check direct object first
+    const directExtraction = extractProfileData(responseJson, 'direct');
+    if (directExtraction && directExtraction.profilePicUrlHD && !directExtraction.profilePicUrlHD.includes("ui-avatars.com")) {
+      return {
+        username: directExtraction.username || username,
+        fullName: directExtraction.fullName || directExtraction.username || username,
+        profilePicUrlHD: directExtraction.profilePicUrlHD,
+        exists: true
+      };
+    }
 
     // Handle array response
     if (Array.isArray(responseJson)) {
@@ -168,32 +150,68 @@ export class InstagramService {
       for (let i = 0; i < responseJson.length; i++) {
         const item = responseJson[i];
         const extracted = extractProfileData(item, `array[${i}]`);
-        if (extracted && (extracted.username || extracted.profilePicUrlHD)) {
+        if (extracted && extracted.profilePicUrlHD && !extracted.profilePicUrlHD.includes("ui-avatars.com")) {
           return {
             username: extracted.username || username,
             fullName: extracted.fullName || extracted.username || username,
-            profilePicUrlHD: extracted.profilePicUrlHD || '',
+            profilePicUrlHD: extracted.profilePicUrlHD,
+            exists: true
+          };
+        }
+
+        // Check nested structures within array items
+        const nestedPaths = [
+          { obj: item.owner, path: `array[${i}].owner` },
+          { obj: item.user, path: `array[${i}].user` },
+          { obj: item.graphql?.user, path: `array[${i}].graphql.user` },
+          { obj: item.data, path: `array[${i}].data` },
+          { obj: item.profile, path: `array[${i}].profile` },
+          { obj: item.userInfo, path: `array[${i}].userInfo` }
+        ];
+
+        for (const nested of nestedPaths) {
+          if (nested.obj) {
+            const nestedExtracted = extractProfileData(nested.obj, nested.path);
+            if (nestedExtracted && nestedExtracted.profilePicUrlHD && !nestedExtracted.profilePicUrlHD.includes("ui-avatars.com")) {
+              return {
+                username: nestedExtracted.username || username,
+                fullName: nestedExtracted.fullName || nestedExtracted.username || username,
+                profilePicUrlHD: nestedExtracted.profilePicUrlHD,
+                exists: true
+              };
+            }
+          }
+        }
+      }
+    }
+
+    // Check nested structures in direct object
+    const nestedPaths = [
+      { obj: responseJson.owner, path: 'direct.owner' },
+      { obj: responseJson.user, path: 'direct.user' },
+      { obj: responseJson.graphql?.user, path: 'direct.graphql.user' },
+      { obj: responseJson.data, path: 'direct.data' },
+      { obj: responseJson.profile, path: 'direct.profile' },
+      { obj: responseJson.userInfo, path: 'direct.userInfo' }
+    ];
+
+    for (const nested of nestedPaths) {
+      if (nested.obj) {
+        const nestedExtracted = extractProfileData(nested.obj, nested.path);
+        if (nestedExtracted && nestedExtracted.profilePicUrlHD && !nestedExtracted.profilePicUrlHD.includes("ui-avatars.com")) {
+          return {
+            username: nestedExtracted.username || username,
+            fullName: nestedExtracted.fullName || nestedExtracted.username || username,
+            profilePicUrlHD: nestedExtracted.profilePicUrlHD,
             exists: true
           };
         }
       }
-    } else {
-      // Handle direct object response
-      const extracted = extractProfileData(responseJson, 'direct');
-      if (extracted && (extracted.username || extracted.profilePicUrlHD)) {
-        return {
-          username: extracted.username || username,
-          fullName: extracted.fullName || extracted.username || username,
-          profilePicUrlHD: extracted.profilePicUrlHD || '',
-          exists: true
-        };
-      }
     }
 
-    // If we have urlsFromSearch, profile exists but no detailed data
+    // If we have urlsFromSearch, profile exists but no detailed data - only use as last resort
     if (responseJson.urlsFromSearch && responseJson.urlsFromSearch.length > 0) {
       console.log('🔗 PARSING - Found urlsFromSearch but no detailed profile data');
-      console.log('🔗 PARSING - URLs found:', responseJson.urlsFromSearch);
       return {
         username: username,
         fullName: username,

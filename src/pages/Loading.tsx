@@ -35,15 +35,12 @@ const Loading = () => {
         if (profileData.exists) {
           console.log('Profile exists, storing in sessionStorage');
           
-          // 🟡 Debug Log #3: Right after storing in sessionStorage
+          // Store in both locations for compatibility
           sessionStorage.setItem('other_instagram_profile', JSON.stringify(profileData));
-          console.log("🟡 Stored in sessionStorage:", sessionStorage.getItem('other_instagram_profile'));
+          sessionStorage.setItem('instagramData', JSON.stringify(profileData));
           
-          // Verify what was stored
-          const stored = sessionStorage.getItem('other_instagram_profile');
-          console.log('=== STORED IN SESSION STORAGE ===');
-          console.log('Stored data:', stored);
-          console.log('Parsed stored data:', JSON.parse(stored || '{}'));
+          console.log("🟡 Stored in sessionStorage:", sessionStorage.getItem('other_instagram_profile'));
+          console.log("🟡 Stored instagramData:", sessionStorage.getItem('instagramData'));
           
           console.log('Other person profile found, redirecting to confirmation');
           navigate('/profile-confirmation');

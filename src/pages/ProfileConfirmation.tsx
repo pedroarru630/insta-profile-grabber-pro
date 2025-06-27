@@ -18,23 +18,22 @@ const ProfileConfirmation = () => {
 
   useEffect(() => {
     console.log('=== PROFILE CONFIRMATION PAGE - OTHER PEOPLE ===');
+    
+    // Try instagramData first, then fallback to other_instagram_profile
+    const instagramData = sessionStorage.getItem('instagramData');
     const storedProfile = sessionStorage.getItem('other_instagram_profile');
+    
+    console.log('Raw instagramData from sessionStorage:', instagramData);
     console.log('Raw stored profile from sessionStorage:', storedProfile);
     
-    if (storedProfile) {
-      // 🔵 Debug Log #4: Retrieved from sessionStorage before parsing
-      const stored = JSON.parse(storedProfile);
+    const dataToUse = instagramData || storedProfile;
+    
+    if (dataToUse) {
+      const stored = JSON.parse(dataToUse);
       console.log("🔵 Retrieved from sessionStorage:", stored);
-      console.log("🔵 Retrieved from sessionStorage (stringified):", JSON.stringify(stored, null, 2));
       console.log("🔵 stored.profilePicUrlHD:", stored.profilePicUrlHD);
       console.log("🔵 stored.profilePicUrlHD type:", typeof stored.profilePicUrlHD);
       
-      console.log('Parsed profile data:', JSON.stringify(stored, null, 2));
-      console.log('parsed.profilePicUrlHD:', stored.profilePicUrlHD);
-      console.log('parsed.profilePicUrlHD type:', typeof stored.profilePicUrlHD);
-      console.log('parsed.username:', stored.username);
-      console.log('parsed.fullName:', stored.fullName);
-      console.log('parsed.exists:', stored.exists);
       setProfileData(stored);
     } else {
       console.log('No profile data found in sessionStorage, redirecting to input');
@@ -50,6 +49,7 @@ const ProfileConfirmation = () => {
     // Clear stored data and go back to input
     sessionStorage.removeItem('other_instagram_username');
     sessionStorage.removeItem('other_instagram_profile');
+    sessionStorage.removeItem('instagramData');
     navigate('/perfil-outras-pessoas');
   };
 
@@ -70,10 +70,7 @@ const ProfileConfirmation = () => {
   console.log('profileImage:', profileImage);
   console.log('hasValidImage:', hasValidImage);
   
-  // 🔵 Additional debug for image binding
   console.log("🔵 About to bind image src:", profileImage);
-  console.log("🔵 Image src type:", typeof profileImage);
-  console.log("🔵 Image src length:", profileImage ? profileImage.length : 'N/A');
 
   return (
     <div className="min-h-screen bg-gray-200 flex flex-col">
@@ -94,12 +91,10 @@ const ProfileConfirmation = () => {
                   alt={displayName}
                   onLoad={() => {
                     console.log('🟢 ProfileConfirmation - Profile image loaded successfully:', profileImage);
-                    console.log('🟢 Image loaded with src:', profileImage);
                   }}
                   onError={(e) => {
                     console.log('🔴 ProfileConfirmation - Profile image failed to load:', profileImage);
                     console.log('🔴 Error details:', e);
-                    console.log('🔴 Failed image src:', profileImage);
                   }}
                 />
               )}
@@ -109,16 +104,18 @@ const ProfileConfirmation = () => {
             </Avatar>
           </div>
 
-          {/* Debug image element for direct testing */}
-          <div className="flex justify-center mb-4">
-            <img 
-              src={profileImage} 
-              alt="Instagram Profile Picture Debug" 
-              style={{width: '50px', height: '50px', border: '2px solid red'}}
-              onLoad={() => console.log('🟢 Direct img element loaded:', profileImage)}
-              onError={() => console.log('🔴 Direct img element failed:', profileImage)}
-            />
-          </div>
+          {/* Direct image binding for testing */}
+          {hasValidImage && (
+            <div className="flex justify-center mb-4">
+              <img 
+                src={profileImage} 
+                alt="Instagram Profile Picture Direct" 
+                style={{width: '50px', height: '50px', border: '2px solid red', borderRadius: '50%'}}
+                onLoad={() => console.log('🟢 Direct img element loaded:', profileImage)}
+                onError={() => console.log('🔴 Direct img element failed:', profileImage)}
+              />
+            </div>
+          )}
 
           {/* Name */}
           <h1 className="text-2xl font-bold text-center text-gray-800 mb-2">
