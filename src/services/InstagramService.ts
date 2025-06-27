@@ -34,28 +34,37 @@ export class InstagramService {
       
       const cleanUsername = username.replace('@', '');
       
-      // Updated configuration with RESIDENTIAL proxy group
-      const debugConfiguration = {
-        search: cleanUsername,
+      const configuration = {
+        search: `https://www.instagram.com/${cleanUsername}/`,
         searchType: "user",
         searchLimit: 1,
         resultsType: "details",
         resultsLimit: 1,
         addParentData: true,
+        includeHasStories: true,
+        includeHasHighlights: true,
+        includeRecentPosts: true,
+        enhanceUserSearchWithFacebookPage: false,
+        extendOutputFunction: `async ({ data }) => {
+          return {
+            ...data,
+            directProfileData: true
+          };
+        }`,
         proxy: {
           useApifyProxy: true,
           apifyProxyGroups: ["RESIDENTIAL"]
         }
       };
 
-      console.log('🧪 DEBUGGING - Sending this configuration to Apify:', JSON.stringify(debugConfiguration, null, 2));
+      console.log('🧪 Sending this configuration to Apify:', JSON.stringify(configuration, null, 2));
       
       const response = await fetch(this.APIFY_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(debugConfiguration)
+        body: JSON.stringify(configuration)
       });
 
       if (!response.ok) {
@@ -67,8 +76,7 @@ export class InstagramService {
 
       const responseJson = await response.json();
       
-      // 🔴 Debug Log: Full raw JSON from Apify
-      console.log("🔴 Full raw JSON from Apify:", responseJson);
+      console.log("🔴 Raw Apify JSON response:", responseJson);
       
       // Parse the response and extract profile data
       const profileData = this.parseApifyResponse(responseJson, cleanUsername);
