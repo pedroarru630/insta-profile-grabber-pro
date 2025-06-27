@@ -82,6 +82,20 @@ const ProfileConfirmation = () => {
       {/* Main content */}
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-lg">
+          
+          {/* DEBUG: Show full stored data */}
+          <div className="mb-6 p-4 bg-gray-100 rounded-lg text-xs">
+            <h3 className="font-bold mb-2">🔍 DEBUG - Stored Data:</h3>
+            <pre className="whitespace-pre-wrap">{JSON.stringify(profileData, null, 2)}</pre>
+            <div className="mt-2">
+              <strong>profilePicUrlHD value:</strong> "{profileImage}"
+              <br />
+              <strong>profilePicUrlHD length:</strong> {profileImage ? profileImage.length : 'null'}
+              <br />
+              <strong>hasValidImage:</strong> {hasValidImage ? 'true' : 'false'}
+            </div>
+          </div>
+
           {/* Profile picture */}
           <div className="flex justify-center mb-6">
             <Avatar className="w-24 h-24">
@@ -114,6 +128,19 @@ const ProfileConfirmation = () => {
                 onLoad={() => console.log('🟢 Direct img element loaded:', profileImage)}
                 onError={() => console.log('🔴 Direct img element failed:', profileImage)}
               />
+            </div>
+          )}
+
+          {/* Show why image is not displaying */}
+          {!hasValidImage && (
+            <div className="mb-4 p-3 bg-yellow-100 border border-yellow-400 rounded-lg text-sm">
+              <strong>⚠️ Image not displaying because:</strong>
+              <br />
+              profilePicUrlHD = "{profileImage}"
+              <br />
+              {!profileImage && "• profilePicUrlHD is empty/null"}
+              {profileImage && profileImage.trim() === '' && "• profilePicUrlHD is empty string"}
+              {profileImage && profileImage.includes("ui-avatars.com") && "• Using fallback avatar (ui-avatars.com)"}
             </div>
           )}
 
